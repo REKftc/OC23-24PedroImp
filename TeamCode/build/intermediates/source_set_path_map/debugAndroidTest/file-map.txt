@@ -1,0 +1,5 @@
+org.firstinspires.ftc.teamcode.test.TeamCode-androidTest-0 /Users/fionawang/FTC/OC-2023-24-OldRR/TeamCode/build/generated/res/resValues/androidTest/debug
+org.firstinspires.ftc.teamcode.test.TeamCode-androidTest-1 /Users/fionawang/FTC/OC-2023-24-OldRR/TeamCode/build/generated/res/rs/androidTest/debug
+org.firstinspires.ftc.teamcode.test.TeamCode-mergeDebugAndroidTestResources-2 /Users/fionawang/FTC/OC-2023-24-OldRR/TeamCode/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
+org.firstinspires.ftc.teamcode.test.TeamCode-mergeDebugAndroidTestResources-3 /Users/fionawang/FTC/OC-2023-24-OldRR/TeamCode/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
+org.firstinspires.ftc.teamcode.test.TeamCode-merged_res-4 /Users/fionawang/FTC/OC-2023-24-OldRR/TeamCode/build/intermediates/merged_res/debugAndroidTest

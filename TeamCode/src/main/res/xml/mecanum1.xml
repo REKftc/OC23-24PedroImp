@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<Robot type="FirstInspires-FTC">
+    <Webcam name="Webcam 1" serialNumber="E155DF2F" />
+    <LynxUsbDevice name="Control Hub Portal" serialNumber="(embedded)" parentModuleAddress="173">
+        <LynxModule name="Expansion Hub 2" port="2">
+            <goBILDA5202SeriesMotor name="hslidesR" port="0" />
+            <goBILDA5202SeriesMotor name="driveRB" port="1" />
+            <goBILDA5202SeriesMotor name="driveRF" port="2" />
+            <goBILDA5202SeriesMotor name="hslidesL" port="3" />
+            <Servo name="droneShooter" port="5" />
+            <Servo name="angular" port="4" />
+            <Servo name="backClaw" port="2" />
+            <Servo name="frontClaw" port="3" />
+            <Servo name="arm" port="0" />
+            <Servo name="wrist" port="1" />
+            <AnalogInput name="armVolt" port="0" />
+            <RevColorSensorV3 name="sensorR" port="1" bus="1" />
+        </LynxModule>
+        <LynxModule name="Control Hub" port="173">
+            <goBILDA5202SeriesMotor name="driveLF" port="0" />
+            <goBILDA5202SeriesMotor name="driveLB" port="1" />
+            <goBILDA5202SeriesMotor name="vSlides" port="2" />
+            <goBILDA5202SeriesMotor name="intake" port="3" />
+            <Servo name="intakeSmallTilt" port="0" />
+            <Servo name="intakeBigTilt" port="2" />
+            <Servo name="Hang" port="1" />
+            <Servo name="intakeDoor" port="3" />
+            <!--<Servo name="leftPixel" port="4" />-->
+            <Servo name="pixel" port="5" />
+            <DigitalDevice name="vlimitswitch" port="6" />
+            <DigitalDevice name="hlimitswitch" port="7" />
+            <LynxEmbeddedIMU name="imu" port="0" bus="0" />
+            <Analog name="intakeVolt" port="1" />
+            <RevColorSensorV3 name="sensorL" port="1" bus="1" />
+            <RevColorSensorV3 name="sensorF" port="3" bus="3" />
+            <!--<DigitalDevice name="led_white" port="6" />
+            <DigitalDevice name="led_yellow" port="4" />
+            <DigitalDevice name="led_red" port="2" />
+            <DigitalDevice name="led_blue" port="5" />
+            <DigitalDevice name="led_green" port="3" />-->
+        </LynxModule>
+    </LynxUsbDevice>
+</Robot>
