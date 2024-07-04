@@ -51,31 +51,51 @@ import java.util.ArrayList;
 @Autonomous(name = "Pedro Path Test 2", group = "Autonomous")
 public class autoPedroTest2 extends OpMode{
 
+    private RobotMecanum robot;
+
     //cam
     private int pathState;
     HSVPipeline detector;
     OpenCvWebcam webcam;
-    propLocation location = propLocation.Middle;
     EasyOpenCVExample.RingDeterminationPipeline pipeline;
+    propLocation location = propLocation.Middle;
 
-    // all spike mark locations
+    /* LOCATION GUIDE
+    • Field is a coordinate system spanning from the red human player wing (0,0) to the corner of the red backdrop (144,144)
+    • center of the field is (72,72) therefore you can base values off of it(eg. 36 is a fourth of the field)
+    • You can then use a ruler/measuring tape to find the exact values of specific poses you want. just add/substract it from the closest relative value(72, 36, 144) and keep it as preset poses
+    */
+
+    //All spikemark locations
+    //
+    //red left spike poses
     private Pose redLeftSideLeftSpikeMark = new Pose(36 + 72, -47.5 + 72);
     private Pose redLeftSideMiddleSpikeMark = new Pose(24.5 + 72, -36 + 72);
     private Pose redLeftSideRightSpikeMark = new Pose(36 + 72, -24.5 + 72);
+    //
+    //red right spike poses
     private Pose redRightSideLeftSpikeMark = new Pose(36 + 72, 0.5 + 72);
     private Pose redRightSideMiddleSpikeMark = new Pose(24.5 + 72, 12 + 72);
     private Pose redRightSideRightSpikeMark = new Pose(36 + 72, 23.5 + 72);
+    //
+    //blue left spike poses
     private Pose blueLeftSideLeftSpikeMark = new Pose(-36 + 72, 23.5 + 72);
     private Pose blueLeftSideMiddleSpikeMark = new Pose(-24.5 + 72, 12 + 72);
     private Pose blueLeftSideRightSpikeMark = new Pose(-36 + 72, 0.5 + 72);
+    //
+    //blue right spike poses
     private Pose blueRightSideLeftSpikeMark = new Pose(-36 + 72, -24.5 + 72);
     private Pose blueRightSideMiddleSpikeMark = new Pose(-24.5 + 72, -36 + 72);
     private Pose blueRightSideRightSpikeMark = new Pose(-36 + 72, -47.5 + 72);
-
+    
     // backdrop april tag locations
+    //
+    //blue side
     private Pose blueLeftBackdrop = new Pose(-42.875 + 72, 60.75 + 72);
     private Pose blueMiddleBackdrop = new Pose(-36.75 + 72, 60.75 + 72);
     private Pose blueRightBackdrop = new Pose(-30.75 + 72, 60.75 + 72);
+    //
+    //red side
     private Pose redLeftBackdrop = new Pose(30.75 + 72, 60.75 + 72);
     private Pose redMiddleBackdrop = new Pose(36.75 + 72, 60.75 + 72);
     private Pose redRightBackdrop = new Pose(42.875 + 72, 60.75 + 72);
@@ -89,16 +109,18 @@ public class autoPedroTest2 extends OpMode{
     private Pose blueOuterStack = new Pose(-36 + 72, -72 + 72);
 
 
-    //presets
+    //Pose presets
     private Pose spikeMarkGoalPose, initialBackdropGoalPose, firstCycleStackPose, firstCycleBackdropGoalPose, secondCycleStackPose, secondCycleBackdropGoalPose;
     private Pose moveOutPose, dropperPose, ready2Score;
     private Pose startPose = new Pose(144-(63 + 72), 84, Math.PI);
     private Pose initialspikeposeHeading = new Pose(0, 0, 180);
 
+    //Other presets
     private Follower follower;
     private Path scoreSpikeMark, initialScoreOnBackdrop;
     private PathChain firstCycleToStack, firstCycleStackGrab, firstCycleScoreOnBackdrop, secondCycleToStack, secondCycleStackGrab, secondCycleScoreOnBackdrop;
 
+    //Starting goal poses
     public void startingGoalPose() {
         switch (location) {
             case Left:
@@ -107,7 +129,7 @@ public class autoPedroTest2 extends OpMode{
                 break;
             default:
             case Middle:
-                spikeMarkGoalPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-14 ,blueLeftSideMiddleSpikeMark.getY(), 0);//0);
+                spikeMarkGoalPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-12 ,blueLeftSideMiddleSpikeMark.getY(), 0);//0);
                 moveOutPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-28, blueLeftSideMiddleSpikeMark.getY(), 0);
                 break;
             case Right:
@@ -127,7 +149,7 @@ public class autoPedroTest2 extends OpMode{
 
             default:
             case Middle:
-                initialBackdropGoalPose = new Pose(blueMiddleBackdrop.getX() - 0.75, blueMiddleBackdrop.getY() - 10,0);
+                initialBackdropGoalPose = new Pose(blueMiddleBackdrop.getX()-0, blueMiddleBackdrop.getY() - 22,0);
                 break;
 
             case Right:
@@ -135,11 +157,12 @@ public class autoPedroTest2 extends OpMode{
                 break;
 
         }
-        ready2Score = new Pose(blueMiddleBackdrop.getX(),blueMiddleBackdrop.getY()-20, 0);
+        ready2Score = new Pose(blueMiddleBackdrop.getX(),blueMiddleBackdrop.getY()-28, 0);
     }
 
 
     // more presets
+    //also init path sequence actions
     public void buildPaths() {
         switch (location) {
             case Left:
@@ -153,7 +176,7 @@ public class autoPedroTest2 extends OpMode{
         //spikeMark
         //
         scoreSpikeMark = new Path(new BezierCurve(new Point(startPose), new Point(moveOutPose), new Point(spikeMarkGoalPose)));
-        scoreSpikeMark.setLinearHeadingInterpolation(startPose.getHeading(), Math.toRadians(-75));//Math.PI*3/2);
+        scoreSpikeMark.setLinearHeadingInterpolation(startPose.getHeading(), Math.toRadians(-85));//Math.PI*3/2);
         //scoreSpikeMark.setConstantHeadingInterpolation(startPose.getHeading());
         scoreSpikeMark.setPathEndTimeoutConstraint(3);
 
@@ -161,7 +184,7 @@ public class autoPedroTest2 extends OpMode{
         //first backdrop
         //
         initialScoreOnBackdrop = new Path(new BezierCurve(scoreSpikeMark.getLastControlPoint(), new Point(ready2Score), new Point(initialBackdropGoalPose)));
-        initialScoreOnBackdrop.setConstantHeadingInterpolation(Math.toRadians(-75));
+        initialScoreOnBackdrop.setConstantHeadingInterpolation(Math.toRadians(-90));
         //initialScoreOnBackdrop.setLinearHeadingInterpolation(scoreSpikeMark.getEndTangent().getTheta(), Math.PI * 1.5, 0.5);
         initialScoreOnBackdrop.setPathEndTimeoutConstraint(3);
 
@@ -170,22 +193,27 @@ public class autoPedroTest2 extends OpMode{
 
     // Main pathing
     public void autonomousPathUpdate() {
+        //WaitLinear lp = new WaitLinear(this);
         switch (pathState) {
-            case 10: // starts following the first path - score purple
+            case 10: // starts following the spike mark detected
                 follower.followPath(scoreSpikeMark);
 
-                setPathState(11);
-                break;
-            case 11: // score yellow path
-                follower.followPath(initialScoreOnBackdrop);
                 //setPathState(12);
+                break;
+            case 11: //pixel dropper
+                //lp.waitMillis(100);
+                //robot.pixel.LEFT_DUMP;
+                //setPathState(12);
+            case 12: // score yellow path
+                follower.followPath(initialScoreOnBackdrop);
+                //setPathState(13);
                 break;
 
 
         }
     }
 
-    // Sets the path
+    // path setter
     public void setPathState(int state){
         pathState = state;
         //pathTimer.resetTimer();
@@ -196,15 +224,20 @@ public class autoPedroTest2 extends OpMode{
 
     }
 
+    //loop de loop
     @Override
     public void loop() {
         follower.update();
     }
 
-    // RAHHHH
+    // initialization
     @Override
     public void init() {
 
+        //robot = new RobotMecanum(this, true, false);
+
+
+        //cam init
         initCamera();
         this.detector = new HSVPipeline();
         webcam.setPipeline(detector);
@@ -222,18 +255,29 @@ public class autoPedroTest2 extends OpMode{
                 location = propLocation.Middle;
             }
         }
+
+        //follower init
         follower = new Follower(hardwareMap);
         follower.setStartingPose(startPose);
 
+        //telem cam updates
         telemetry.addData("Prop Location", location);
         telemetry.update();
+        /*
+        robot.pixel.setLeftIn();
+        float lPixelPos = robot.pixel.pixel.getPosition();
+        robot.pixel.setPos(lPixelPos);
+
+        */
     }
 
+    //loop de loop but initialized
     @Override
     public void init_loop() {
 
     }
 
+    //start
     @Override
     public void start() {
         startingGoalPose();
@@ -241,6 +285,8 @@ public class autoPedroTest2 extends OpMode{
         buildPaths();
         setPathState(10);
     }
+
+    //camera init
     private void initCamera() {
         int cameraMonitorViewId = hardwareMap.appContext.getResources()
                 .getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
