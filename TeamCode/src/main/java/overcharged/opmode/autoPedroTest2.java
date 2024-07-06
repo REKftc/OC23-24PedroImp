@@ -60,6 +60,8 @@ public class autoPedroTest2 extends OpMode{
     EasyOpenCVExample.RingDeterminationPipeline pipeline;
     propLocation location = propLocation.Middle;
 
+    //WaitLinear lp = new WaitLinear(this);
+
     /* LOCATION GUIDE
     • Field is a coordinate system spanning from the red human player wing (0,0) to the corner of the red backdrop (144,144)
     • center of the field is (72,72) therefore you can base values off of it(eg. 36 is a fourth of the field)
@@ -112,8 +114,11 @@ public class autoPedroTest2 extends OpMode{
     //Pose presets
     private Pose spikeMarkGoalPose, initialBackdropGoalPose, firstCycleStackPose, firstCycleBackdropGoalPose, secondCycleStackPose, secondCycleBackdropGoalPose;
     private Pose moveOutPose, dropperPose, ready2Score;
-    private Pose startPose = new Pose(144-(63 + 72), 84, Math.PI);
     private Pose initialspikeposeHeading = new Pose(0, 0, 180);
+
+    private Pose startPose = new Pose(144-(63 + 72), 84, Math.PI);
+
+    private Pose endPose = new Pose(1,1,0);
 
     //Other presets
     private Follower follower;
@@ -129,8 +134,8 @@ public class autoPedroTest2 extends OpMode{
                 break;
             default:
             case Middle:
-                spikeMarkGoalPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-12 ,blueLeftSideMiddleSpikeMark.getY(), 0);//0);
-                moveOutPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-28, blueLeftSideMiddleSpikeMark.getY(), 0);
+                spikeMarkGoalPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-10.5 ,blueLeftSideMiddleSpikeMark.getY(), 0);//0);
+                moveOutPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-20, blueLeftSideMiddleSpikeMark.getY(), 0);
                 break;
             case Right:
                 spikeMarkGoalPose = new Pose(blueLeftSideRightSpikeMark.getX() , blueLeftSideRightSpikeMark.getY(), 0);
@@ -176,38 +181,49 @@ public class autoPedroTest2 extends OpMode{
         //spikeMark
         //
         scoreSpikeMark = new Path(new BezierCurve(new Point(startPose), new Point(moveOutPose), new Point(spikeMarkGoalPose)));
-        scoreSpikeMark.setLinearHeadingInterpolation(startPose.getHeading(), Math.toRadians(-85));//Math.PI*3/2);
-        //scoreSpikeMark.setConstantHeadingInterpolation(startPose.getHeading());
+        scoreSpikeMark.setConstantHeadingInterpolation(startPose.getHeading());
         scoreSpikeMark.setPathEndTimeoutConstraint(3);
+
 
 
         //first backdrop
         //
         initialScoreOnBackdrop = new Path(new BezierCurve(scoreSpikeMark.getLastControlPoint(), new Point(ready2Score), new Point(initialBackdropGoalPose)));
         initialScoreOnBackdrop.setConstantHeadingInterpolation(Math.toRadians(-90));
-        //initialScoreOnBackdrop.setLinearHeadingInterpolation(scoreSpikeMark.getEndTangent().getTheta(), Math.PI * 1.5, 0.5);
         initialScoreOnBackdrop.setPathEndTimeoutConstraint(3);
 
     }
 
 
     // Main pathing
-    public void autonomousPathUpdate() {
-        //WaitLinear lp = new WaitLinear(this);
+    public void autoPath() {
         switch (pathState) {
             case 10: // starts following the spike mark detected
                 follower.followPath(scoreSpikeMark);
-
-                //setPathState(12);
+                setPathState(11);
                 break;
-            case 11: //pixel dropper
-                lp.waitMillis(100);
-                robot.pixel.setLeftDump();
-                //robot.pixel.LEFT_DUMP;
-                //setPathState(12);
-            case 12: // score yellow path
+            case 11: // anti wall bump at start
+                if (follower.getCurrentTValue() > 0.1) {
+                    scoreSpikeMark.setLinearHeadingInterpolation(startPose.getHeading() - 0.1 * MathFunctions.getTurnDirection(startPose.getHeading(), scoreSpikeMark.getEndTangent().getTheta()) * MathFunctions.getSmallestAngleDifference(startPose.getHeading(), scoreSpikeMark.getEndTangent().getTheta()), scoreSpikeMark.getEndTangent().getTheta());
+                    setPathState(12);
+                }
+                break;
+            case 12: // pixel dropper
+                if (!follower.isBusy()) {
+                    robot.pixel.setLeftDump();
+                    //waitFor(1000);
+                    setPathState(13);
+                }
+                break;
+            case 13: // score yellow path
                 follower.followPath(initialScoreOnBackdrop);
-                //setPathState(13);
+                //setPathState(14);
+                break;
+            case 14: // raise slides & extend depo
+                break;
+            case 15: // retrieve depo
+                break;
+            case 16: //starting going for stack - 1st cycle
                 break;
 
 
@@ -218,7 +234,7 @@ public class autoPedroTest2 extends OpMode{
     public void setPathState(int state){
         pathState = state;
         //pathTimer.resetTimer();
-        autonomousPathUpdate();
+        autoPath();
     }
 
     public void startDistanceSensorDisconnectDetection(int state) {
@@ -229,6 +245,9 @@ public class autoPedroTest2 extends OpMode{
     @Override
     public void loop() {
         follower.update();
+        autoPath();
+        telemetry.addLine("TValue: "+follower.getCurrentTValue());
+        telemetry.addLine("Path: " + pathState);
     }
 
     // initialization
@@ -239,7 +258,6 @@ public class autoPedroTest2 extends OpMode{
 
 
         //cam init
-        WaitLinear lp = new WaitLinear(this);
         initCamera();
         this.detector = new HSVPipeline();
         webcam.setPipeline(detector);
@@ -265,12 +283,6 @@ public class autoPedroTest2 extends OpMode{
         //telem cam updates
         telemetry.addData("Prop Location", location);
         telemetry.update();
-        /*
-        robot.pixel.setLeftIn();
-        float lPixelPos = robot.pixel.pixel.getPosition();
-        robot.pixel.setPos(lPixelPos);
-
-        */
     }
 
     //loop de loop but initialized
@@ -298,4 +310,13 @@ public class autoPedroTest2 extends OpMode{
         webcam.openCameraDevice();
         webcam.startStreaming(320,240, OpenCvCameraRotation.UPSIDE_DOWN);
     }
+
+    //waiter
+    public static void waitFor(int milliseconds) {
+        long startTime = System.currentTimeMillis();
+        while (System.currentTimeMillis() - startTime < milliseconds) {
+            // loop
+        }
+    }
+
 }
