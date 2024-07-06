@@ -201,7 +201,8 @@ public class autoPedroTest2 extends OpMode{
                 //setPathState(12);
                 break;
             case 11: //pixel dropper
-                //lp.waitMillis(100);
+                lp.waitMillis(100);
+                robot.pixel.setLeftDump();
                 //robot.pixel.LEFT_DUMP;
                 //setPathState(12);
             case 12: // score yellow path
@@ -238,6 +239,7 @@ public class autoPedroTest2 extends OpMode{
 
 
         //cam init
+        WaitLinear lp = new WaitLinear(this);
         initCamera();
         this.detector = new HSVPipeline();
         webcam.setPipeline(detector);
