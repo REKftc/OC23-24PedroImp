@@ -1,17 +1,10 @@
 package overcharged.opmode;
 
-import static overcharged.config.RobotConstants.ROBOT_FRONT_LENGTH;
-import static overcharged.config.RobotConstants.ROBOT_BACK_LENGTH;
-import static overcharged.config.RobotConstants.TAG_SL;
-
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.RobotLog;
 
@@ -22,15 +15,10 @@ import org.openftc.easyopencv.OpenCvWebcam;
 
 import overcharged.components.RobotMecanum;
 import overcharged.components.propLocation;
-import overcharged.components.pixelDropper;
 import overcharged.config.RobotConstants;
-import overcharged.drive.DriveConstants;
-import overcharged.linear.util.SelectLinear;
-import overcharged.linear.util.WaitLinear;
 import overcharged.drive.SampleMecanumDrive;
 import overcharged.test.EasyOpenCVExample;
 import overcharged.test.HSVPipeline;
-import overcharged.trajectorysequence.TrajectorySequence;
 
 import overcharged.pedroPathing.follower.Follower;
 import overcharged.pedroPathing.localization.Pose;
@@ -41,11 +29,7 @@ import overcharged.pedroPathing.pathGeneration.MathFunctions;
 import overcharged.pedroPathing.pathGeneration.Path;
 import overcharged.pedroPathing.pathGeneration.PathChain;
 import overcharged.pedroPathing.pathGeneration.Point;
-import overcharged.pedroPathing.util.SingleRunAction;
 import overcharged.pedroPathing.util.Timer;
-import overcharged.opmode.teleop2;
-
-import java.util.ArrayList;
 
 
 // Main Class
@@ -56,6 +40,8 @@ public class autoPedroTest2 extends OpMode{
     FtcDashboard dashboard = FtcDashboard.getInstance();
     MultipleTelemetry telems;
     SampleMecanumDrive drive;
+    private Timer pathTimer, opmodeTimer, scanTimer, distanceSensorUpdateTimer, distanceSensorDecimationTimer;
+
 
     //cam
     private int pathState;
@@ -117,15 +103,18 @@ public class autoPedroTest2 extends OpMode{
 
     //Pose presets
     private Pose spikeMarkGoalPose, initialBackdropGoalPose, firstCycleStackPose, firstCycleBackdropGoalPose, secondCycleStackPose, secondCycleBackdropGoalPose;
-    private Pose moveOutPose, dropperPose, ready2Score;
+    private Pose dropperPose, ready2Score;
     private Pose bDropBackAway;
     private Pose cycleOuterStack, cycleInnerStack;
-    private Pose midTrussPose, bridgePose;
+    private Pose midTrussPose;
     private Pose initialspikeposeHeading = new Pose(0, 0, 180);
 
-    private Pose startPose = new Pose(144-(63 + 72), 84, Math.PI);
+    private Pose startPose = new Pose(9.5, 72+16.75, Math.PI);
 
     private Pose endPose = new Pose(1,1,0);
+
+    private Point moveOutPoint;
+    private Point bridgePoint, bridgeReadyPoint;
 
     //Other presets
     private Follower follower;
@@ -137,16 +126,16 @@ public class autoPedroTest2 extends OpMode{
         switch (location) {
             case Left:
                 spikeMarkGoalPose = new Pose(blueLeftSideLeftSpikeMark.getX() , blueLeftSideLeftSpikeMark.getY(), 0);
-                moveOutPose = new Pose();
+                moveOutPoint = new Point(blueLeftSideMiddleSpikeMark.getX()-20, blueLeftSideMiddleSpikeMark.getY(), Point.CARTESIAN);
                 break;
             default:
             case Middle:
-                spikeMarkGoalPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-10.5 ,blueLeftSideMiddleSpikeMark.getY(), 0);//0);
-                moveOutPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-20, blueLeftSideMiddleSpikeMark.getY(), 0);
+                spikeMarkGoalPose = new Pose(blueLeftSideMiddleSpikeMark.getX()-9 ,blueLeftSideMiddleSpikeMark.getY()+6, Math.toRadians(-90));//0);
+                moveOutPoint = new Point(blueLeftSideMiddleSpikeMark.getX()-18, blueLeftSideMiddleSpikeMark.getY()+6, Point.CARTESIAN);
                 break;
             case Right:
                 spikeMarkGoalPose = new Pose(blueLeftSideRightSpikeMark.getX() , blueLeftSideRightSpikeMark.getY(), 0);
-                moveOutPose = new Pose();
+                moveOutPoint = new Point(blueLeftSideMiddleSpikeMark.getX()-20, blueLeftSideMiddleSpikeMark.getY(), Point.CARTESIAN);
                 break;
 
         }
@@ -161,7 +150,7 @@ public class autoPedroTest2 extends OpMode{
 
             default:
             case Middle:
-                initialBackdropGoalPose = new Pose(blueMiddleBackdrop.getX()-0, blueMiddleBackdrop.getY() - 26,0);
+                initialBackdropGoalPose = new Pose(blueMiddleBackdrop.getX()-0, blueMiddleBackdrop.getY() - 26,Math.toRadians(-90));
                 break;
 
             case Right:
@@ -169,7 +158,7 @@ public class autoPedroTest2 extends OpMode{
                 break;
 
         }
-        ready2Score = new Pose(blueMiddleBackdrop.getX(),blueMiddleBackdrop.getY()-30, 0);
+        ready2Score = new Pose(blueMiddleBackdrop.getX(),blueMiddleBackdrop.getY()-30, Math.toRadians(-90));
     }
 
 
@@ -182,24 +171,29 @@ public class autoPedroTest2 extends OpMode{
             default:
             case Middle:
                 bDropBackAway = new Pose(blueMiddleBackdrop.getX()-0, blueMiddleBackdrop.getY()-28,0);
-                cycleOuterStack = new Pose(blueOuterStack.getX(), blueOuterStack.getY()+12);
-                midTrussPose = new Pose(blueLeftSideRightSpikeMark.getX()+5, blueLeftSideRightSpikeMark.getY());
-                cycleInnerStack = new Pose(blueInnerStack.getX()+12, blueInnerStack.getY()+24);
-                bridgePose = new Pose(84, 90);
             case Right:
 
         }
+        //poses
+        //TODO: clean this up
+        bridgeReadyPoint = new Point(72, blueMiddleBackdrop.getY()-28, Point.CARTESIAN);
+        bridgePoint = new Point(72, 60, Point.CARTESIAN);
+        //
+        midTrussPose = new Pose(blueLeftSideRightSpikeMark.getX()+5, blueLeftSideRightSpikeMark.getY());
+        //
+        cycleOuterStack = new Pose(blueOuterStack.getX(), blueOuterStack.getY()+12);
+        cycleInnerStack = new Pose(blueInnerStack.getX()+12, blueInnerStack.getY()+20);
+
         //spikeMark
         //
-        scoreSpikeMark = new Path(new BezierCurve(new Point(startPose), new Point(moveOutPose), new Point(spikeMarkGoalPose)));
+        scoreSpikeMark = new Path(new BezierCurve(new Point(startPose), moveOutPoint, new Point(spikeMarkGoalPose)));
         scoreSpikeMark.setConstantHeadingInterpolation(startPose.getHeading());
         scoreSpikeMark.setPathEndTimeoutConstraint(3);
 
 
-
         //first backdrop
         //
-        initialScoreOnBackdrop = new Path(new BezierCurve(new Point(spikeMarkGoalPose), new Point(ready2Score), new Point(initialBackdropGoalPose)));
+        initialScoreOnBackdrop = new Path(new BezierCurve(scoreSpikeMark.getLastControlPoint(), new Point(ready2Score), new Point(initialBackdropGoalPose)));
         initialScoreOnBackdrop.setConstantHeadingInterpolation(Math.toRadians(-90));
         initialScoreOnBackdrop.setPathEndTimeoutConstraint(3);
 
@@ -215,7 +209,7 @@ public class autoPedroTest2 extends OpMode{
 
         // Bridge Cycle
         //
-        cycleOneBridge = new Path(new BezierCurve(new Point(bDropBackAway), new Point(bridgePose), new Point(cycleInnerStack)));
+        cycleOneBridge = new Path(new BezierCurve(backAway.getLastControlPoint(), bridgeReadyPoint, bridgePoint, new Point(cycleInnerStack)));
         cycleOneBridge.setConstantHeadingInterpolation(Math.toRadians(-90));
     }
 
@@ -226,38 +220,59 @@ public class autoPedroTest2 extends OpMode{
         switch (pathState) {
             case 10: // starts following the spike mark detected
                 follower.followPath(scoreSpikeMark);
+                hSlidesIn();
                 setPathState(11);
                 break;
             case 11: // anti wall bump at start
                 if (follower.getCurrentTValue() > 0.1) {
                     scoreSpikeMark.setLinearHeadingInterpolation(startPose.getHeading() - 0.1 * MathFunctions.getTurnDirection(startPose.getHeading(), scoreSpikeMark.getEndTangent().getTheta()) * MathFunctions.getSmallestAngleDifference(startPose.getHeading(), scoreSpikeMark.getEndTangent().getTheta()), Math.toRadians(-90));
+                    //waitFor(500);
+                    //setPathState(100);
+                    setPathState(110);
+                }
+            case 110: //holds pixel dropper point
+                if (!follower.isBusy()) {
+                    follower.holdPoint(new BezierPoint(scoreSpikeMark.getLastControlPoint()), Math.toRadians(-90));
                     setPathState(12);
                 }
                 break;
             case 12: // pixel dropper
-                if (!follower.isBusy()) {
-                    boolean Blue = true;
-                    if(Blue) {
-                        float lPixelPos = robot.pixel.pixel.getPosition();//153f;
-                        long dropperTime = System.currentTimeMillis();
-                        while (lPixelPos >= robot.pixel.LEFT_OUT && System.currentTimeMillis() - dropperTime < 1000) {
-                            RobotLog.ii(RobotConstants.TAG_R, "left pixel pos" + lPixelPos + "dump" + robot.pixel.LEFT_DUMP);
-                            telemetry.addLine("purple pixel: "+lPixelPos);
-                            RobotLog.ii(RobotConstants.TAG_R, "moving left pixel");
-                            lPixelPos -= 8;
-                            robot.pixel.setPos(lPixelPos);
-                            waitFor(1000);
-                        }
+                if (pathTimer.getElapsedTime() > 5000 && !follower.isBusy()) {
+                    float lPixelPos = robot.pixel.pixel.getPosition();//153f;
+                    long dropperTime = System.currentTimeMillis();
+                    while (lPixelPos >= robot.pixel.LEFT_OUT && System.currentTimeMillis() - dropperTime < 1000) {
+                        RobotLog.ii(RobotConstants.TAG_R, "left pixel pos" + lPixelPos + "dump" + robot.pixel.LEFT_DUMP);
+                        telemetry.addLine("purple pixel: "+lPixelPos);
+                        RobotLog.ii(RobotConstants.TAG_R, "moving left pixel");
+                        lPixelPos -= 8;
+                        robot.pixel.setPos(lPixelPos);
                     }
+                    waitFor(750);
                     setPathState(13);
+                    //setPathState(100);
                 }
                 break;
             case 13: // score yellow path
+                hSlidesIn();
                 follower.followPath(initialScoreOnBackdrop);
-                setPathState(14);
+                //setPathState(14);
+                setPathState(130);
+                //setPathState(100);
+                break;
+            case 130:
+                if (!follower.isBusy()) {
+                    //follower.holdPoint(new BezierPoint(initialScoreOnBackdrop.getLastControlPoint()), Math.toRadians(-90));
+                    setPathState(14);
+                }
+                break;
+            case 131:
+                if (!follower.isBusy()) {
+                    setPathState(14);
+                }
                 break;
             case 14: // raise slides & extend depo
-                if (!follower.isBusy()) {
+                // TODO: CONDENSE THIS
+                if (pathTimer.getElapsedTime()>500) {
                     robot.depo.setFrontClawPos(robot.depo.FRONT_CLOSE);
                     robot.depo.setBackClawPos(robot.depo.BACK_CLOSE);
                     robot.vSlides.moveEncoderTo(robot.vSlides.autoLevel, 1);
@@ -272,7 +287,6 @@ public class autoPedroTest2 extends OpMode{
                     setPathState(15);
                     //setPathState(100);
                 }
-
                 break;
             case 15: // start going to stack
                 follower.followPath(backAway);
@@ -280,12 +294,13 @@ public class autoPedroTest2 extends OpMode{
                 //setPathState(100);
                 break;
             case 16: // retrieve depo while running case 15
-                if (follower.getCurrentTValue() > 0.3) {
+                if (follower.getCurrentTValue() > 0.2) {
                     //telemetry.addLine("robot.depo.WRIST_IN_VERT");
                     robot.depo.setWristPos(robot.depo.WRIST_IN_VERT);
-                    waitFor(750);
+                    waitFor(500);
                     robot.depo.setArmPos(robot.depo.ARM_IN);
-                    //waitFor(500);
+                    waitFor(500);
+                    vSlidesDown();
                     //robot.vSlides.moveEncoderTo(robot.vSlides.autoLevel, 0);
                     setPathState(17);
                 }
@@ -297,7 +312,8 @@ public class autoPedroTest2 extends OpMode{
                 break;
             case 18:  // score the 1st cycle on backdrop
                 break;
-            case 100:
+            case 100: // empty test case
+                telems.addLine("CASE 100");
                 break;
 
 
@@ -307,6 +323,8 @@ public class autoPedroTest2 extends OpMode{
     // path setter
     public void setPathState(int state){
         pathState = state;
+        pathTimer.resetTimer();
+        autoPath();
         //pathTimer.resetTimer();
 
     }
@@ -332,6 +350,7 @@ public class autoPedroTest2 extends OpMode{
         telems = new MultipleTelemetry(dashboard.getTelemetry(), telemetry);
         robot = new RobotMecanum(this, true, true);
         drive = new SampleMecanumDrive(hardwareMap);
+        pathTimer = new Timer();
 
         // component init
         robot.hang.setIn();
@@ -343,9 +362,6 @@ public class autoPedroTest2 extends OpMode{
         startingGoalPose();
         backdropPoses();
         buildPaths();
-
-
-
 
         //cam init
         initCamera();
@@ -414,6 +430,29 @@ public class autoPedroTest2 extends OpMode{
         while (System.currentTimeMillis() - startTime < milliseconds) {
             // loop
         }
+    }
+    public void vSlidesDown(){
+        robot.vSlides.vSlides.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        while(!robot.vSlides.slideReachedBottom()){
+            robot.vSlides.down();
+        }
+        robot.vSlides.forcestop();
+        robot.vSlides.vSlides.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    }
+    public void hSlidesIn(){
+        robot.hslides.hslidesR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.hslides.hslidesL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        while(!robot.hslides.switchSlideDown.isTouch()){
+            robot.hslides.inAuto();
+        }
+
+        robot.hslides.hslidesR.setPower(0);
+        robot.hslides.hslidesL.setPower(0);
+
+        robot.hslides.hslidesR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        robot.hslides.hslidesL.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
     }
 
 }
