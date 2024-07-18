@@ -17,6 +17,7 @@ import overcharged.components.RobotMecanum;
 import overcharged.components.propLocation;
 import overcharged.config.RobotConstants;
 import overcharged.drive.SampleMecanumDrive;
+import overcharged.pedroPathing.util.SingleRunAction;
 import overcharged.test.EasyOpenCVExample;
 import overcharged.test.HSVPipeline;
 
@@ -33,7 +34,7 @@ import overcharged.pedroPathing.util.Timer;
 
 
 // Main Class
-@Autonomous(name = "Pedro Path Test 2", group = "Autonomous")
+@Autonomous(name = "Pedro Pathing Autonomous BlueClose 2+2", group = "Autonomous")
 public class autoPedroTest2 extends OpMode{
 
     private RobotMecanum robot;
@@ -41,6 +42,7 @@ public class autoPedroTest2 extends OpMode{
     MultipleTelemetry telems;
     SampleMecanumDrive drive;
     private Timer pathTimer, opmodeTimer, scanTimer, distanceSensorUpdateTimer, distanceSensorDecimationTimer;
+    private SingleRunAction foldUp;
 
 
     //cam
@@ -111,14 +113,14 @@ public class autoPedroTest2 extends OpMode{
 
     private Pose startPose = new Pose(9.5, 72+16.75, Math.PI);
 
-    private Pose endPose = new Pose(1,1,0);
+    private Point endPoint = new Point(60,56+72,Point.CARTESIAN);
 
     private Point moveOutPoint;
     private Point bridgePoint, bridgeReadyPoint;
 
     //Other presets
     private Follower follower;
-    private Path scoreSpikeMark, initialScoreOnBackdrop, backAway, cycleOneMidTruss, cycleOneBridge;
+    private Path scoreSpikeMark, initialScoreOnBackdrop, backAway, cycleOneMidTruss, cycleOneBridge, cycleOneBoard;
     private PathChain firstCycleToStack, firstCycleStackGrab, firstCycleScoreOnBackdrop, secondCycleToStack, secondCycleStackGrab, secondCycleScoreOnBackdrop;
 
     //Starting goal poses
@@ -202,22 +204,29 @@ public class autoPedroTest2 extends OpMode{
         backAway = new Path(new BezierLine(new Point(initialBackdropGoalPose), new Point(bDropBackAway)));
         backAway.setConstantHeadingInterpolation(Math.toRadians(-90));
 
-        // Middle Truss cycle
+        // Middle Truss cycle - UNUSED
         //
         cycleOneMidTruss = new Path(new BezierCurve(new Point(bDropBackAway), new Point(midTrussPose), new Point(cycleOuterStack)));
         cycleOneMidTruss.setConstantHeadingInterpolation(Math.toRadians(-90));
 
-        // Bridge Cycle
+        // Bridge Cycle - USED
         //
-        cycleOneBridge = new Path(new BezierCurve(backAway.getLastControlPoint(), bridgeReadyPoint, bridgePoint, new Point(cycleInnerStack)));
+        cycleOneBridge = new Path(new BezierCurve(backAway.getLastControlPoint(), /*bridgeReadyPoint,*/ bridgePoint, new Point(cycleInnerStack)));
+        cycleOneBridge.setConstantHeadingInterpolation(Math.toRadians(-90));
+
+        //Stack come back to board
+        //
+        cycleOneBoard = new Path(new BezierCurve(cycleOneBridge.getLastControlPoint(), bridgePoint, new Point(bDropBackAway)));
         cycleOneBridge.setConstantHeadingInterpolation(Math.toRadians(-90));
     }
 
 
 
-//    // Main pathing
+    // Main pathing
     public void autoPath() {
         switch (pathState) {
+            // Auto Body
+            //
             case 10: // starts following the spike mark detected
                 follower.followPath(scoreSpikeMark);
                 hSlidesIn();
@@ -259,14 +268,9 @@ public class autoPedroTest2 extends OpMode{
                 setPathState(130);
                 //setPathState(100);
                 break;
-            case 130:
+            case 130: // Holds position while scoring - TODO: make it work!
                 if (!follower.isBusy()) {
                     //follower.holdPoint(new BezierPoint(initialScoreOnBackdrop.getLastControlPoint()), Math.toRadians(-90));
-                    setPathState(14);
-                }
-                break;
-            case 131:
-                if (!follower.isBusy()) {
                     setPathState(14);
                 }
                 break;
@@ -295,28 +299,70 @@ public class autoPedroTest2 extends OpMode{
                 break;
             case 16: // retrieve depo while running case 15
                 if (follower.getCurrentTValue() > 0.2) {
-                    //telemetry.addLine("robot.depo.WRIST_IN_VERT");
                     robot.depo.setWristPos(robot.depo.WRIST_IN_VERT);
                     waitFor(500);
                     robot.depo.setArmPos(robot.depo.ARM_IN);
                     waitFor(500);
                     vSlidesDown();
-                    //robot.vSlides.moveEncoderTo(robot.vSlides.autoLevel, 0);
                     setPathState(17);
                 }
             case 17: //starting going for stack - 1st cycle
                 if (!follower.isBusy()) {
                     follower.followPath(cycleOneBridge);
-                    setPathState(18);
+                    //setPathState(18);
+                    setPathState(100);
                 }
                 break;
-            case 18:  // score the 1st cycle on backdrop
+            case 18:  // grab pixel(empty case because intake is bad)
+                setPathState(19);
+                break;
+            case 19: // Score first cycle path
+                follower.followPath(cycleOneBoard);
+                setPathState(20);
+                break;
+            case 20: // score pixels
+                // TODO: CONDENSE THIS
+                robot.depo.setFrontClawPos(robot.depo.FRONT_CLOSE);
+                robot.depo.setBackClawPos(robot.depo.BACK_CLOSE);
+                robot.vSlides.moveEncoderTo(robot.vSlides.autoLevel, 1);
+                waitFor(1000);
+                robot.depo.setArmPos(robot.depo.ARM_OUT);
+                waitFor(750);
+                robot.depo.setWristPos(robot.depo.WRIST_OPP_VERT);
+                waitFor(500);
+                robot.depo.setFrontClawPos(robot.depo.FRONT_DUMP);
+                robot.depo.setBackClawPos(robot.depo.BACK_DUMP);
+                waitFor(500);
+                setPathState(21);
+                break;
+            case 21: // park and end
+                follower.resetOffset();
+                telemetry.addLine("!AUTO FINISHING!");
+                PathChain abort = follower.pathBuilder()
+                        .addPath(new BezierLine(new Point(follower.getPose()), endPoint))
+                        .setConstantHeadingInterpolation(Math.PI * 1.5)
+                        .build();
+                follower.followPath(abort);
+                setPathState(69);
+                break;
+            case 69: // make sure end
+                if (!follower.isBusy()) {
+                    setPathState(21);
+                }
                 break;
             case 100: // empty test case
-                telems.addLine("CASE 100");
+                telems.addLine("CASE 100 - END!");
                 break;
 
+            default:
+                requestOpModeStop();
+                break;
+        }
 
+        // makes robot park if auto about to end
+        // TODO: Test
+        if (opmodeTimer.getElapsedTimeSeconds() > 28) {
+            foldUp.run();
         }
     }
 
@@ -325,12 +371,10 @@ public class autoPedroTest2 extends OpMode{
         pathState = state;
         pathTimer.resetTimer();
         autoPath();
-        //pathTimer.resetTimer();
-
     }
 
+    // Distance Sensor Checker
     public void startDistanceSensorDisconnectDetection(int state) {
-
     }
 
     //loop de loop
@@ -342,11 +386,16 @@ public class autoPedroTest2 extends OpMode{
         telemetry.addLine("Path: " + pathState);
     }
 
-    // initialization robot
-    // init pedro
+    // initialize robot
     @Override
     public void init() {
 
+        // Timeout Safety Net
+        foldUp = new SingleRunAction(()-> {
+            if (Integer.parseInt(String.valueOf(pathState).substring(0,1)) < 4) setPathState(21);
+        });
+
+        // Robot things init
         telems = new MultipleTelemetry(dashboard.getTelemetry(), telemetry);
         robot = new RobotMecanum(this, true, true);
         drive = new SampleMecanumDrive(hardwareMap);
@@ -407,9 +456,14 @@ public class autoPedroTest2 extends OpMode{
         // park
     @Override
     public void start() {
+        // starts auto paths
         setPathState(10);
+
+        // just to make sure claw closed
         robot.depo.setFrontClawPos(robot.depo.FRONT_CLOSE);
         robot.depo.setBackClawPos(robot.depo.BACK_CLOSE);
+
+        // safety net if auto doesn't start for some reason
         autoPath();
     }
 
@@ -431,6 +485,8 @@ public class autoPedroTest2 extends OpMode{
             // loop
         }
     }
+
+    // Vslides reset function
     public void vSlidesDown(){
         robot.vSlides.vSlides.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
@@ -440,6 +496,8 @@ public class autoPedroTest2 extends OpMode{
         robot.vSlides.forcestop();
         robot.vSlides.vSlides.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
     }
+
+    //Hslides reset function
     public void hSlidesIn(){
         robot.hslides.hslidesR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         robot.hslides.hslidesL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -456,3 +514,10 @@ public class autoPedroTest2 extends OpMode{
     }
 
 }
+
+/*
+TODO: :3
+TODO: tune cases > 17
+TODO: Get intake Working
+TODO: Left and Right beacon paths
+*/

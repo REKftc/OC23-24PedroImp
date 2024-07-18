@@ -33,7 +33,6 @@ import java.util.ArrayList;
 
 
 // Main Class
-@Autonomous(name = "Pedro Path Test", group = "Autonomous")
 public class autoPedroTest extends OpMode {
 
     private Timer pathTimer, opmodeTimer, scanTimer, distanceSensorUpdateTimer, distanceSensorDecimationTimer;
