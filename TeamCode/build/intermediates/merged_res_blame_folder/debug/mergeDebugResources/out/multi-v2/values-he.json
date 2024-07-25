@@ -4,7 +4,7 @@
             "outputFile": "org.firstinspires.ftc.teamcode.TeamCode-mergeDebugResources-17:/values-he/values-he.xml",
             "map": [
                 {
-                    "source": "/Users/yanderek/.gradle/caches/transforms-4/1046cb1939fedf8e24c5c87bcb18f301/transformed/jetified-zxing-android-embedded-4.3.0/res/values-he/values-he.xml",
+                    "source": "C:\\Users\\angie\\.gradle\\caches\\transforms-4\\1046cb1939fedf8e24c5c87bcb18f301\\transformed\\jetified-zxing-android-embedded-4.3.0\\res\\values-he\\values-he.xml",
                     "from": {
                         "startLines": "2,3,4,5",
                         "startColumns": "4,4,4,4",

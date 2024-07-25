@@ -34,7 +34,7 @@ import overcharged.pedroPathing.util.Timer;
 
 
 // Main Class
-@Autonomous(name = "Pedro Pathing Autonomous BlueClose 2+2", group = "Autonomous")
+@Autonomous(name = "Pedro Pathing Auto BlueClose 2+2", group = "Autonomous")
 public class autoPedroTest2 extends OpMode{
 
     private RobotMecanum robot;
@@ -217,7 +217,7 @@ public class autoPedroTest2 extends OpMode{
         //Stack come back to board
         //
         cycleOneBoard = new Path(new BezierCurve(cycleOneBridge.getLastControlPoint(), bridgePoint, new Point(bDropBackAway)));
-        cycleOneBridge.setConstantHeadingInterpolation(Math.toRadians(-90));
+        cycleOneBoard.setConstantHeadingInterpolation(Math.toRadians(-90));
     }
 
 
@@ -263,7 +263,26 @@ public class autoPedroTest2 extends OpMode{
                 break;
             case 13: // score yellow path
                 hSlidesIn();
+                initialBackdropGoalPose = new Pose(initialBackdropGoalPose.getX(), blueMiddleBackdrop.getY()-18-(blueMiddleBackdrop.getY()-scoreSpikeMark.getLastControlPoint().getY()-(robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getBackSonarDistance()))),Math.toRadians(-90));
+                initialScoreOnBackdrop = new Path(new BezierCurve(scoreSpikeMark.getLastControlPoint(), new Point(ready2Score), new Point(initialBackdropGoalPose)));
+                initialScoreOnBackdrop.setConstantHeadingInterpolation(Math.toRadians(-90));
+                initialScoreOnBackdrop.setPathEndTimeoutConstraint(3);
+
                 follower.followPath(initialScoreOnBackdrop);
+
+                /*   //if too far or close to board
+                if(robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getBackSonarDistance()) < 17.5 || robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getBackSonarDistance())> 18.5){
+                    RobotLog.ii(RobotConstants.TAG_R, "running");
+                    follower.followPath(new Path(new BezierLine(new Point(initialBackdropGoalPose),
+                            new Point(new Pose (blueMiddleBackdrop.getX(),
+                                    blueMiddleBackdrop.getY()-18-(18-robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getBackSonarDistance())),Math.toRadians(-90))))));
+                    RobotLog.ii(RobotConstants.TAG_R, "moved in auto");
+                    waitFor(1000);
+
+                }
+
+                 */
+
                 //setPathState(14);
                 setPathState(130);
                 //setPathState(100);
@@ -309,8 +328,8 @@ public class autoPedroTest2 extends OpMode{
             case 17: //starting going for stack - 1st cycle
                 if (!follower.isBusy()) {
                     follower.followPath(cycleOneBridge);
-                    //setPathState(18);
-                    setPathState(100);
+                    setPathState(18);
+                    //setPathState(100);
                 }
                 break;
             case 18:  // grab pixel(empty case because intake is bad)
@@ -361,9 +380,10 @@ public class autoPedroTest2 extends OpMode{
 
         // makes robot park if auto about to end
         // TODO: Test
-        if (opmodeTimer.getElapsedTimeSeconds() > 28) {
+        // NOT WORKING
+      /*  if (opmodeTimer.getElapsedTimeSeconds() > 28) {
             foldUp.run();
-        }
+        }*/
     }
 
     // path setter
@@ -384,6 +404,11 @@ public class autoPedroTest2 extends OpMode{
         autoPath();
         telemetry.addLine("TValue: "+follower.getCurrentTValue());
         telemetry.addLine("Path: " + pathState);
+        
+        telemetry.addData("left actual sonar distance:", robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getLeftSonarDistance()));
+        telemetry.addData("back actual sonar distance:", robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getBackSonarDistance()));
+        telemetry.addData("calculated dist: ",(blueMiddleBackdrop.getY()-scoreSpikeMark.getLastControlPoint().getY()-(robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getBackSonarDistance()))));
+        telemetry.update();
     }
 
     // initialize robot
@@ -400,6 +425,7 @@ public class autoPedroTest2 extends OpMode{
         robot = new RobotMecanum(this, true, true);
         drive = new SampleMecanumDrive(hardwareMap);
         pathTimer = new Timer();
+
 
         // component init
         robot.hang.setIn();
