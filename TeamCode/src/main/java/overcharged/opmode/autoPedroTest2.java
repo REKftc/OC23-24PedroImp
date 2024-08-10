@@ -106,9 +106,9 @@ public class autoPedroTest2 extends OpMode{
     //Pose presets
     private Pose spikeMarkGoalPose, initialBackdropGoalPose, firstCycleStackPose, firstCycleBackdropGoalPose, secondCycleStackPose, secondCycleBackdropGoalPose;
     private Pose dropperPose, ready2Score;
-    private Pose bDropBackAway;
+    private Pose bDropBackAway, aDropBackAway;
     private Pose cycleOuterStack, cycleInnerStack;
-    private Pose midTrussPose;
+    private Pose midTrussPose, bridgePoint;
     private Pose initialspikeposeHeading = new Pose(0, 0, 180);
 
     private Pose startPose = new Pose(9.5, 72+16.75, Math.PI);
@@ -116,7 +116,7 @@ public class autoPedroTest2 extends OpMode{
     private Point endPoint = new Point(60,56+72,Point.CARTESIAN);
 
     private Point moveOutPoint;
-    private Point bridgePoint, bridgeReadyPoint;
+    private Point bridgeReadyPoint;
 
     //Other presets
     private Follower follower;
@@ -172,14 +172,16 @@ public class autoPedroTest2 extends OpMode{
 
             default:
             case Middle:
-                bDropBackAway = new Pose(blueMiddleBackdrop.getX()-0, blueMiddleBackdrop.getY()-30,0);
+                bDropBackAway = new Pose(blueMiddleBackdrop.getX()-0, blueMiddleBackdrop.getY()-30,Math.toRadians(-90));
+                aDropBackAway = new Pose(blueMiddleBackdrop.getX()-0, blueMiddleBackdrop.getY()-28,Math.toRadians(-90));
             case Right:
 
         }
         //poses
         //TODO: clean this up
         bridgeReadyPoint = new Point(72, blueMiddleBackdrop.getY()-28, Point.CARTESIAN);
-        bridgePoint = new Point(72, 60, Point.CARTESIAN);
+     //   bridgePoint = new Point(72, 60, Point.CARTESIAN);
+        bridgePoint = new Pose(72, 60, Math.toRadians(-90));
         //
         midTrussPose = new Pose(blueLeftSideRightSpikeMark.getX()+5, blueLeftSideRightSpikeMark.getY());
         //
@@ -201,9 +203,9 @@ public class autoPedroTest2 extends OpMode{
 
         // Back away from backdrop
         //
-        backAway = new Path(new BezierLine(new Point(initialBackdropGoalPose), new Point(bDropBackAway)));
+        backAway = new Path(new BezierCurve(initialScoreOnBackdrop.getLastControlPoint(), new Point(aDropBackAway), new Point(bDropBackAway)));
         backAway.setConstantHeadingInterpolation(Math.toRadians(-90));
-
+        backAway.setPathEndTimeoutConstraint(8);
         // Middle Truss cycle - UNUSED
         //
         cycleOneMidTruss = new Path(new BezierCurve(new Point(bDropBackAway), new Point(midTrussPose), new Point(cycleOuterStack)));
@@ -211,12 +213,12 @@ public class autoPedroTest2 extends OpMode{
 
         // Bridge Cycle - USED
         //
-        cycleOneBridge = new Path(new BezierCurve(backAway.getLastControlPoint(), /*bridgeReadyPoint,*/ bridgePoint, new Point(cycleInnerStack)));
+        cycleOneBridge = new Path(new BezierCurve(backAway.getLastControlPoint(), /*bridgeReadyPoint,*/ new Point(bridgePoint), new Point(cycleInnerStack)));
         cycleOneBridge.setConstantHeadingInterpolation(Math.toRadians(-90));
 
         //Stack come back to board
         //
-        cycleOneBoard = new Path(new BezierCurve(cycleOneBridge.getLastControlPoint(), bridgePoint, new Point(bDropBackAway)));
+        cycleOneBoard = new Path(new BezierCurve(cycleOneBridge.getLastControlPoint(), new Point(bridgePoint), new Point(initialBackdropGoalPose)));
         cycleOneBoard.setConstantHeadingInterpolation(Math.toRadians(-90));
     }
 
@@ -312,9 +314,14 @@ public class autoPedroTest2 extends OpMode{
                 }
                 break;
             case 15: // start going to stack
-                bDropBackAway = new Pose(blueMiddleBackdrop.getX()-0, initialBackdropGoalPose.getY()-10,0);
-                backAway = new Path(new BezierLine(new Point(initialBackdropGoalPose), new Point(bDropBackAway)));
+            //    telemetry.addData("init backdrop pose", initialScoreOnBackdrop.getLastControlPoint().getY() );
+              //  telemetry.update();
+                aDropBackAway = new Pose(initialBackdropGoalPose.getX(), initialBackdropGoalPose.getY()-7, Math.toRadians(-90));
+                bDropBackAway = new Pose(initialBackdropGoalPose.getX(), initialBackdropGoalPose.getY()-8, Math.toRadians(-90));
+                backAway = new Path(new BezierCurve(new Point(initialBackdropGoalPose), new Point(aDropBackAway),new Point(bDropBackAway)));
                 backAway.setConstantHeadingInterpolation(Math.toRadians(-90));
+             //   backAway.setPathEndTimeoutConstraint(8);
+
                 follower.followPath(backAway);
                 setPathState(16);
                 //setPathState(100);
@@ -331,6 +338,7 @@ public class autoPedroTest2 extends OpMode{
                 break;
             case 17: //starting going for stack - 1st cycle
                 if (!follower.isBusy()) {
+                    cycleOneBridge = new Path(new BezierCurve(new Point(bDropBackAway), /*bridgeReadyPoint,*/ new Point(bridgePoint), new Point(cycleInnerStack)));
                     follower.followPath(cycleOneBridge);
                     setPathState(18);
                     //setPathState(100);
@@ -421,7 +429,8 @@ public class autoPedroTest2 extends OpMode{
         autoPath();
         telemetry.addLine("TValue: "+follower.getCurrentTValue());
         telemetry.addLine("Path: " + pathState);
-        
+
+        telemetry.addData("is busy?", follower.isBusy());
         telemetry.addData("left actual sonar distance:", robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getLeftSonarDistance()));
         telemetry.addData("back actual sonar distance:", robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getBackSonarDistance()));
         telemetry.addData("calculated dist: ",(blueMiddleBackdrop.getY()-scoreSpikeMark.getLastControlPoint().getY()-(robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getBackSonarDistance()))));
