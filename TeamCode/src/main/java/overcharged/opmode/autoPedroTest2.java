@@ -316,13 +316,15 @@ public class autoPedroTest2 extends OpMode{
             case 15: // start going to stack
             //    telemetry.addData("init backdrop pose", initialScoreOnBackdrop.getLastControlPoint().getY() );
               //  telemetry.update();
-                aDropBackAway = new Pose(initialBackdropGoalPose.getX(), initialBackdropGoalPose.getY()-7, Math.toRadians(-90));
+                aDropBackAway = new Pose(initialBackdropGoalPose.getX(), initialBackdropGoalPose.getY()-6, Math.toRadians(-90));
                 bDropBackAway = new Pose(initialBackdropGoalPose.getX(), initialBackdropGoalPose.getY()-8, Math.toRadians(-90));
                 backAway = new Path(new BezierCurve(new Point(initialBackdropGoalPose), new Point(aDropBackAway),new Point(bDropBackAway)));
                 backAway.setConstantHeadingInterpolation(Math.toRadians(-90));
-             //   backAway.setPathEndTimeoutConstraint(8);
+                backAway.setPathEndTimeoutConstraint(3);
 
                 follower.followPath(backAway);
+                //waitFor(500);
+               // follower.breakFollowing();
                 setPathState(16);
                 //setPathState(100);
                 break;
@@ -333,10 +335,15 @@ public class autoPedroTest2 extends OpMode{
                     robot.depo.setArmPos(robot.depo.ARM_IN);
                     waitFor(500);
                     vSlidesDown();
+
                     setPathState(17);
                 }
+
+                //setPathState(17);
+
                 break;
             case 17: //starting going for stack - 1st cycle
+                follower.breakFollowing();
                 if (!follower.isBusy()) {
                     cycleOneBridge = new Path(new BezierCurve(new Point(bDropBackAway), /*bridgeReadyPoint,*/ new Point(bridgePoint), new Point(cycleInnerStack)));
                     follower.followPath(cycleOneBridge);
