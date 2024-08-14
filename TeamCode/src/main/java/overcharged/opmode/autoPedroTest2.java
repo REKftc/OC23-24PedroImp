@@ -44,6 +44,9 @@ public class autoPedroTest2 extends OpMode{
     private Timer pathTimer, opmodeTimer, scanTimer, distanceSensorUpdateTimer, distanceSensorDecimationTimer;
     private SingleRunAction foldUp;
 
+    //other stuff
+    boolean mrBeast = false;
+
 
     //cam
     private int pathState;
@@ -120,7 +123,7 @@ public class autoPedroTest2 extends OpMode{
 
     //Other presets
     private Follower follower;
-    private Path scoreSpikeMark, initialScoreOnBackdrop, backAway, cycleOneMidTruss, cycleOneBridge, cycleOneBoard;
+    private Path scoreSpikeMark, initialScoreOnBackdrop, backAway, cycleOneMidTruss, cycleOneBridge, altCycleOneBridge, cycleOneBoard;
     private PathChain firstCycleToStack, firstCycleStackGrab, firstCycleScoreOnBackdrop, secondCycleToStack, secondCycleStackGrab, secondCycleScoreOnBackdrop;
 
     //Starting goal poses
@@ -199,9 +202,13 @@ public class autoPedroTest2 extends OpMode{
         initialScoreOnBackdrop.setConstantHeadingInterpolation(Math.toRadians(-90));
         initialScoreOnBackdrop.setPathEndTimeoutConstraint(3);
 
+        // More backdrop (pose)
+        //
+        firstCycleBackdropGoalPose =  new Pose(blueMiddleBackdrop.getX()+2, blueMiddleBackdrop.getY() - 20,Math.toRadians(-90));
+
         // Back away from backdrop
         //
-        backAway = new Path(new BezierLine(new Point(initialBackdropGoalPose), new Point(bDropBackAway)));
+        backAway = new Path(new BezierCurve(new Point(initialBackdropGoalPose), new Point(bDropBackAway)));
         backAway.setConstantHeadingInterpolation(Math.toRadians(-90));
 
         // Middle Truss cycle - UNUSED
@@ -209,15 +216,20 @@ public class autoPedroTest2 extends OpMode{
         cycleOneMidTruss = new Path(new BezierCurve(new Point(bDropBackAway), new Point(midTrussPose), new Point(cycleOuterStack)));
         cycleOneMidTruss.setConstantHeadingInterpolation(Math.toRadians(-90));
 
-        // Bridge Cycle - USED
+        // Bridge Cycle - USED/BROKEN
         //
-        cycleOneBridge = new Path(new BezierCurve(backAway.getLastControlPoint(), /*bridgeReadyPoint,*/ bridgePoint, new Point(cycleInnerStack)));
+        cycleOneBridge = new Path(new BezierCurve(new Point(bDropBackAway), bridgeReadyPoint, bridgePoint, new Point(cycleInnerStack)));
         cycleOneBridge.setConstantHeadingInterpolation(Math.toRadians(-90));
+
+        // Other Bridge Cycle(From Board) - USED
+        //
+        altCycleOneBridge = new Path(new BezierCurve(new Point(initialBackdropGoalPose), bridgeReadyPoint, bridgePoint, new Point(cycleInnerStack)));
+        altCycleOneBridge.setConstantHeadingInterpolation(Math.toRadians(-90));
 
         //Stack come back to board
         //
-        cycleOneBoard = new Path(new BezierCurve(cycleOneBridge.getLastControlPoint(), bridgePoint, new Point(bDropBackAway)));
-        cycleOneBridge.setConstantHeadingInterpolation(Math.toRadians(-90));
+        cycleOneBoard = new Path(new BezierCurve(new Point(cycleInnerStack), bridgePoint, bridgeReadyPoint, new Point(firstCycleBackdropGoalPose)));
+        cycleOneBoard.setConstantHeadingInterpolation(Math.toRadians(-90));
     }
 
 
@@ -246,7 +258,7 @@ public class autoPedroTest2 extends OpMode{
                 }
                 break;
             case 12: // pixel dropper
-                if (pathTimer.getElapsedTime() > 5000 && !follower.isBusy()) {
+                if (pathTimer.getElapsedTime() > 2000 && !follower.isBusy()) {
                     float lPixelPos = robot.pixel.pixel.getPosition();//153f;
                     long dropperTime = System.currentTimeMillis();
                     while (lPixelPos >= robot.pixel.LEFT_OUT && System.currentTimeMillis() - dropperTime < 1000) {
@@ -292,6 +304,13 @@ public class autoPedroTest2 extends OpMode{
                     //setPathState(100);
                 }
                 break;
+            case 140: // alternative cycle first stack optiom
+                if (!follower.isBusy()) {
+                    follower.followPath(altCycleOneBridge);
+                    mrBeast = true;
+                    setPathState(16);
+                }
+                break;
             case 15: // start going to stack
                 follower.followPath(backAway);
                 setPathState(16);
@@ -304,35 +323,52 @@ public class autoPedroTest2 extends OpMode{
                     robot.depo.setArmPos(robot.depo.ARM_IN);
                     waitFor(500);
                     vSlidesDown();
-                    setPathState(17);
+                    if (mrBeast) {
+                        setPathState(18);
+                    } else{
+                        setPathState(17);
+                    }
+
                 }
             case 17: //starting going for stack - 1st cycle
                 if (!follower.isBusy()) {
                     follower.followPath(cycleOneBridge);
-                    //setPathState(18);
-                    setPathState(100);
+                    setPathState(18);
+                    //setPathState(100);
                 }
                 break;
             case 18:  // grab pixel(empty case because intake is bad)
                 setPathState(19);
                 break;
             case 19: // Score first cycle path
-                follower.followPath(cycleOneBoard);
-                setPathState(20);
+                if (!follower.isBusy()) {
+                    follower.followPath(cycleOneBoard);
+                    setPathState(20);
+                }
                 break;
             case 20: // score pixels
                 // TODO: CONDENSE THIS
-                robot.depo.setFrontClawPos(robot.depo.FRONT_CLOSE);
-                robot.depo.setBackClawPos(robot.depo.BACK_CLOSE);
-                robot.vSlides.moveEncoderTo(robot.vSlides.autoLevel, 1);
-                waitFor(1000);
-                robot.depo.setArmPos(robot.depo.ARM_OUT);
-                waitFor(750);
-                robot.depo.setWristPos(robot.depo.WRIST_OPP_VERT);
+                if (follower.getCurrentTValue() > 0.8) {
+                    robot.depo.setFrontClawPos(robot.depo.FRONT_CLOSE);
+                    robot.depo.setBackClawPos(robot.depo.BACK_CLOSE);
+                    robot.vSlides.moveEncoderTo(robot.vSlides.autoLevel, 1);
+                    waitFor(1000);
+                    robot.depo.setArmPos(robot.depo.ARM_OUT);
+                    waitFor(750);
+                    robot.depo.setWristPos(robot.depo.WRIST_OPP_VERT);
+                    waitFor(500);
+                    robot.depo.setFrontClawPos(robot.depo.FRONT_DUMP);
+                    robot.depo.setBackClawPos(robot.depo.BACK_DUMP);
+                    waitFor(500);
+                    setPathState(200);
+                }
+                break;
+            case 200:  // depo down
+                robot.depo.setWristPos(robot.depo.WRIST_IN_VERT);
                 waitFor(500);
-                robot.depo.setFrontClawPos(robot.depo.FRONT_DUMP);
-                robot.depo.setBackClawPos(robot.depo.BACK_DUMP);
+                robot.depo.setArmPos(robot.depo.ARM_IN);
                 waitFor(500);
+                vSlidesDown();
                 setPathState(21);
                 break;
             case 21: // park and end
@@ -343,7 +379,8 @@ public class autoPedroTest2 extends OpMode{
                         .setConstantHeadingInterpolation(Math.PI * 1.5)
                         .build();
                 follower.followPath(abort);
-                setPathState(69);
+                setPathState(100);
+                //setPathState(69);
                 break;
             case 69: // make sure end
                 if (!follower.isBusy()) {
@@ -358,13 +395,15 @@ public class autoPedroTest2 extends OpMode{
                 requestOpModeStop();
                 break;
         }
-
+        /*
         // makes robot park if auto about to end
         // TODO: Test
         if (opmodeTimer.getElapsedTimeSeconds() > 28) {
             foldUp.run();
         }
+        */
     }
+
 
     // path setter
     public void setPathState(int state){
