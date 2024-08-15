@@ -275,6 +275,12 @@ public class autoPedroTest2 extends OpMode{
                 break;
             case 13: // score yellow path
                 hSlidesIn();
+                // adjust using back sensor
+                initialBackdropGoalPose = new Pose(initialBackdropGoalPose.getX(), blueMiddleBackdrop.getY()-7-(blueMiddleBackdrop.getY()-scoreSpikeMark.getLastControlPoint().getY()-(robot.ultrasonicSensor.getActualSonarDistance(robot.ultrasonicSensor.getBackSonarDistance()))),Math.toRadians(-90));
+                initialScoreOnBackdrop = new Path(new BezierCurve(scoreSpikeMark.getLastControlPoint(), new Point(ready2Score), new Point(initialBackdropGoalPose)));
+                initialScoreOnBackdrop.setConstantHeadingInterpolation(Math.toRadians(-90));
+                initialScoreOnBackdrop.setPathEndTimeoutConstraint(3);
+
                 follower.followPath(initialScoreOnBackdrop);
                 //setPathState(14);
                 setPathState(130);
