@@ -48,7 +48,10 @@ public class RobotMecanum {
     public hang rightHang;
     public newDepo depo;
 
+
     public MecanumDrive drive;
+
+    public ultrasonicSensor ultrasonicSensor;
 
     public OcBnoGyro2 gyroSensor;
     public RevColorSensorV3 sensorR;
@@ -232,7 +235,13 @@ public class RobotMecanum {
             missing = missing + ", depo";
             numberMissing++;
         }
-
+        try {
+            ultrasonicSensor = new ultrasonicSensor(hardwareMap);
+        } catch (Exception e){
+            RobotLog.ee(RobotConstants.TAG_R,  "missing: ultrasonic sensor " + e.getMessage());
+            missing = missing + ", ultrasonic sensor";
+            numberMissing++;
+        }
         try {
             sensorR = hardwareMap.get(RevColorSensorV3.class, "sensorR");
         } catch (Exception e) {
