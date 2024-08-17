@@ -233,7 +233,7 @@ public class autoPedroTest2 extends OpMode{
     }
 
 
-
+    // TODO: HERE IS WHERE THE MAIN PATH IS
     // Main pathing
     public void autoPath() {
         switch (pathState) {
@@ -295,17 +295,7 @@ public class autoPedroTest2 extends OpMode{
             case 14: // raise slides & extend depo
                 // TODO: CONDENSE THIS
                 if (pathTimer.getElapsedTime()>500) {
-                    robot.depo.setFrontClawPos(robot.depo.FRONT_CLOSE);
-                    robot.depo.setBackClawPos(robot.depo.BACK_CLOSE);
-                    robot.vSlides.moveEncoderTo(robot.vSlides.autoLevel, 1);
-                    waitFor(1000);
-                    robot.depo.setArmPos(robot.depo.ARM_OUT);
-                    waitFor(750);
-                    robot.depo.setWristPos(robot.depo.WRIST_OPP_VERT);
-                    waitFor(500);
-                    robot.depo.setFrontClawPos(robot.depo.FRONT_DUMP);
-                    robot.depo.setBackClawPos(robot.depo.BACK_DUMP);
-                    waitFor(500);
+                    depoScore();
                     setPathState(15);
                     //setPathState(100);
                 }
@@ -324,10 +314,7 @@ public class autoPedroTest2 extends OpMode{
                 break;
             case 16: // retrieve depo while running case 15
                 if (follower.getCurrentTValue() > 0.2) {
-                    robot.depo.setWristPos(robot.depo.WRIST_IN_VERT);
-                    waitFor(500);
-                    robot.depo.setArmPos(robot.depo.ARM_IN);
-                    waitFor(500);
+                    depoRetri();
                     vSlidesDown();
                     if (mrBeast) {
                         setPathState(18);
@@ -355,26 +342,12 @@ public class autoPedroTest2 extends OpMode{
             case 20: // score pixels
                 // TODO: CONDENSE THIS
                 if (follower.getCurrentTValue() > 0.8) {
-                    robot.depo.setFrontClawPos(robot.depo.FRONT_CLOSE);
-                    robot.depo.setBackClawPos(robot.depo.BACK_CLOSE);
-                    robot.vSlides.moveEncoderTo(robot.vSlides.autoLevel, 1);
-                    waitFor(1000);
-                    robot.depo.setArmPos(robot.depo.ARM_OUT);
-                    waitFor(750);
-                    robot.depo.setWristPos(robot.depo.WRIST_OPP_VERT);
-                    waitFor(500);
-                    robot.depo.setFrontClawPos(robot.depo.FRONT_DUMP);
-                    robot.depo.setBackClawPos(robot.depo.BACK_DUMP);
-                    waitFor(500);
+                    depoScore();
                     setPathState(200);
                 }
                 break;
             case 200:  // depo down
-                robot.depo.setWristPos(robot.depo.WRIST_IN_VERT);
-                waitFor(500);
-                robot.depo.setArmPos(robot.depo.ARM_IN);
-                waitFor(500);
-                vSlidesDown();
+                depoRetri();
                 setPathState(21);
                 break;
             case 21: // park and end
@@ -394,7 +367,7 @@ public class autoPedroTest2 extends OpMode{
                 }
                 break;
             case 100: // empty test case
-                telems.addLine("CASE 100 - END!");
+                telems.addLine("CASE 100 - IN TEST CASE!!");
                 break;
 
             default:
@@ -531,6 +504,30 @@ public class autoPedroTest2 extends OpMode{
         }
     }
 
+    // depo score sequence up function
+    public void depoScore(){
+        robot.depo.setFrontClawPos(robot.depo.FRONT_CLOSE);
+        robot.depo.setBackClawPos(robot.depo.BACK_CLOSE);
+        robot.vSlides.moveEncoderTo(robot.vSlides.autoLevel, 1);
+        waitFor(1000);
+        robot.depo.setArmPos(robot.depo.ARM_OUT);
+        waitFor(750);
+        robot.depo.setWristPos(robot.depo.WRIST_OPP_VERT);
+        waitFor(500);
+        robot.depo.setFrontClawPos(robot.depo.FRONT_DUMP);
+        robot.depo.setBackClawPos(robot.depo.BACK_DUMP);
+        waitFor(500);
+    }
+
+    // depo retrieve sequence function
+    public void depoRetri(){
+        robot.depo.setWristPos(robot.depo.WRIST_IN_VERT);
+        waitFor(500);
+        robot.depo.setArmPos(robot.depo.ARM_IN);
+        waitFor(500);
+        vSlidesDown();
+    }
+
     // Vslides reset function
     public void vSlidesDown(){
         robot.vSlides.vSlides.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -562,7 +559,7 @@ public class autoPedroTest2 extends OpMode{
 
 /*
 TODO: :3
-TODO: tune cases > 17
+TODO: tune cases > 19
 TODO: Get intake Working
 TODO: Left and Right beacon paths
 */
